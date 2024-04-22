@@ -1,3 +1,4 @@
+import PaginationPage from "@/components/search/Pagination";
 import SearchBar, {SearchForm} from "@/components/search/SearchBar";
 import SearchResultCard from "@/components/search/SearchResultCard";
 import SearchResultInfo from "@/components/search/SearchResultInfo";
@@ -9,24 +10,37 @@ import {useParams} from "react-router-dom";
 
 export type SearchState = {
   searchQuery: string;
+  page: number;
 };
 
 export default function SearchPage() {
   const {city} = useParams();
-  const [searchState, setSearchState] = useState({seachQuery: ""});
-  const {results, isLoading} = useSearchRestaurant(city);
+  const [searchState, setSearchState] = useState<SearchState>({
+    searchQuery: "",
+    page: 1,
+  });
+  const {results, isLoading} = useSearchRestaurant(searchState, city);
 
   function setSearchQuery(searchFormData: SearchForm) {
     setSearchState((prevState) => ({
       ...prevState,
-      seachQuery: searchFormData.searchQuery,
+      searchQuery: searchFormData.searchQuery,
+      page: 1,
+    }));
+  }
+
+  function setPage(page: number) {
+    setSearchState((prevState) => ({
+      ...prevState,
+      page,
     }));
   }
 
   function resetSearch() {
     setSearchState((prevState) => ({
       ...prevState,
-      seachQuery: "",
+      searchQuery: "",
+      page: 1,
     }));
   }
 
@@ -45,7 +59,7 @@ export default function SearchPage() {
       <div id="cuisines-list">{/* TODo insert cuisines list */}</div>
       <div id="main-content" className="flex flex-col gap-5">
         <SearchBar
-          searchQuery={searchState.seachQuery}
+          searchQuery={searchState.searchQuery}
           placeholder="Search by cuisines or restaurant or menu"
           onSubmit={setSearchQuery}
           onReset={resetSearch}
@@ -57,6 +71,11 @@ export default function SearchPage() {
             <Separator />
           </>
         ))}
+        <PaginationPage
+          page={results.pagination.page}
+          pages={results.pagination.pages}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );
