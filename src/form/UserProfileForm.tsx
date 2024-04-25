@@ -24,18 +24,20 @@ const formSchema = z.object({
   city: z.string().min(1, "City  is required"),
   country: z.string().min(1, "Country  is required"),
 });
-type UserFormData = z.infer<typeof formSchema>;
+export type UserFormData = z.infer<typeof formSchema>;
 
 interface UserProfileProps {
   onSave: (userProfileData: UserFormData) => void;
   isLoading: boolean;
   currentUser: User;
+  isCheckout?: boolean;
 }
 
 export default function UserProfileForm({
   onSave,
   isLoading,
   currentUser,
+  isCheckout,
 }: UserProfileProps) {
   const form = useForm<UserFormData>({
     resolver: zodResolver(formSchema),
@@ -58,7 +60,9 @@ export default function UserProfileForm({
         className="space-y-4 bg-gray-50 rounded-lg md:p-10"
       >
         <div>
-          <h2 className="text-2xl font-bold">User Profile Form</h2>
+          <h2 className="text-2xl font-bold">
+            {isCheckout ? "Confirm Delivery Details" : "User Profile Form"}
+          </h2>
           <FormDescription>
             View and change your profile information here.
           </FormDescription>
@@ -94,10 +98,10 @@ export default function UserProfileForm({
             control={form.control}
             name="addressLine1"
             render={({field}) => (
-              <FormItem>
+              <FormItem className="flex-1">
                 <FormLabel>Address Line1</FormLabel>
                 <FormControl>
-                  <Input {...field} className="bg-white md:w-72 xl:w-[800px]" />
+                  <Input {...field} className="bg-white " />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -134,9 +138,11 @@ export default function UserProfileForm({
           {isLoading ? (
             <LoadingButton />
           ) : (
-            <Button variant="submit">Submit</Button>
+            <Button variant="submit">
+              {isCheckout ? "Continue to payment" : "Submit"}
+            </Button>
           )}
-          <DeleteButton />
+          {!isCheckout && <DeleteButton />}
         </div>
       </form>
     </Form>

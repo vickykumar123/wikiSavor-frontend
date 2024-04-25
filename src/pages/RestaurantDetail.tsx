@@ -1,21 +1,29 @@
+import CheckoutButton from "@/components/user-order/CheckoutButton";
 import MenuItems from "@/components/MenuItems";
-import OrderSummary from "@/components/OrderSummary";
+import OrderSummary from "@/components/user-order/OrderSummary";
 import RestaurantInfo from "@/components/RestaurantInfo";
 import {AspectRatio} from "@/components/ui/aspect-ratio";
 import {Button} from "@/components/ui/button";
-import {Card} from "@/components/ui/card";
+import {Card, CardFooter} from "@/components/ui/card";
 import {useGetRestaurantDetails} from "@/graphql/queries/restaurant";
 import {CartItem, MenuItem} from "@/types";
 import {Loader2} from "lucide-react";
 import {useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
+import {useCreateCheckoutSession} from "@/graphql/queries/order";
 
 export default function RestaurantDetail() {
   const navigate = useNavigate();
   const {restaurantId} = useParams();
-  const {results: restaurant, isLoading} =
+  const {results: restaurant, isLoading: GetRestaurantLoading} =
     useGetRestaurantDetails(restaurantId);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const {createCheckSession, isLoading: CreateCheckoutLoading} =
+    useCreateCheckoutSession();
+
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    const storedCartItem = sessionStorage.getItem(`cartItems:${restaurantId}`);
+    return storedCartItem ? JSON.parse(storedCartItem) : [];
+  });
 
   const addToCart = (menuItems: MenuItem) => {
     setCartItems((prevState) => {
@@ -41,7 +49,10 @@ export default function RestaurantDetail() {
           },
         ];
       }
-
+      sessionStorage.setItem(
+        `cartItems:${restaurantId}`,
+        JSON.stringify(updateCartItems)
+      );
       return updateCartItems;
     });
   };
@@ -51,11 +62,31 @@ export default function RestaurantDetail() {
       const updatedCartItems = prevState.filter(
         (item) => cartItem._id !== item._id
       );
+      sessionStorage.setItem(
+        `cartItems:${restaurantId}`,
+        JSON.stringify(updatedCartItems)
+      );
       return updatedCartItems;
     });
   };
 
-  if (isLoading || !restaurant) {
+  const onCheckout = async () => {
+    if (!restaurant) {
+      return;
+    }
+    const checkoutData = {
+      cartItems: cartItems.map((cartItem) => ({
+        menuItemId: cartItem._id,
+        name: cartItem.name,
+        quantity: cartItem.quantity.toString(),
+      })),
+      restaurantId: restaurant._id!,
+    };
+    const data = await createCheckSession(checkoutData);
+    window.location.href = data.url;
+  };
+
+  if (GetRestaurantLoading || !restaurant) {
     return <Loader2 size={40} className="animate-spin text-orange-500" />;
   }
   return (
@@ -68,7 +99,7 @@ export default function RestaurantDetail() {
         &lt;- Back to List
       </Button>
       <div className="flex flex-col gap-10">
-        <AspectRatio ratio={16 / 7}>
+        <AspectRatio ratio={14 / 6}>
           <img
             src={restaurant.imageUrl}
             className="rounded-md object-cover h-full w-full"
@@ -93,6 +124,13 @@ export default function RestaurantDetail() {
                 cartItems={cartItems}
                 removeFromCart={removeFromCart}
               />
+              <CardFooter>
+                <CheckoutButton
+                  disabled={cartItems.length === 0 || CreateCheckoutLoading}
+                  onCheckout={onCheckout}
+                  isLoading={CreateCheckoutLoading}
+                />
+              </CardFooter>
             </Card>
           </div>
         </div>
